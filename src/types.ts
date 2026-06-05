@@ -46,7 +46,16 @@ export interface DBLookupResult {
     bad_bots: number;
     malware: number;
     crawlers: number;
+    matomo: number;
   };
+}
+
+/** Live threat data loaded from KV (refreshed weekly by the cron). */
+export interface ThreatData {
+  badBots: string[];
+  malware: import('./data/malware').MalwareEntry[];
+  crawlers: string[];
+  matomo: string[];
 }
 
 export interface Env {

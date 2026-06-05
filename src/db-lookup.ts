@@ -1,12 +1,18 @@
 /**
  * Layer 2 — Database Lookup Engine
- * Port of db_engine.py check logic using bundled data
+ * Port of db_engine.py check logic.
+ *
+ * Uses live threat data from KV when available (refreshed weekly by the cron in
+ * feeds.ts); otherwise falls back to the bundled snapshot in src/data/*.
  */
 
 import { BAD_BOTS } from './data/bad-bots';
-import { MALWARE_UAS } from './data/malware';
+import { MALWARE_UAS, type MalwareEntry } from './data/malware';
 import { LEGITIMATE_CRAWLERS } from './data/crawlers';
-import type { DBLookupResult, DBMatch } from './types';
+import type { DBLookupResult, DBMatch, RuleFlag, ThreatData } from './types';
+
+// Cap partial-match iteration to bound per-request cost (matches db_engine.py's [:5000]).
+const MAX_PARTIAL_SCAN = 5000;
 
 // Tokens that appear in virtually every real browser UA — skip partial matching on these
 const BROWSER_NOISE_TOKENS = new Set([
@@ -36,18 +42,24 @@ function stripGlobs(pattern: string): string {
   return pattern.replace(/\*/g, '').replace(/\?/g, '').trim();
 }
 
-export function lookupDatabases(ua: string): DBLookupResult {
+export function lookupDatabases(ua: string, data?: ThreatData): DBLookupResult {
+  // Live data from KV, or bundled fallback.
+  const badBotList: string[] = data?.badBots ?? BAD_BOTS;
+  const malwareList: MalwareEntry[] = data?.malware ?? MALWARE_UAS;
+  const crawlerList: string[] = data?.crawlers ?? LEGITIMATE_CRAWLERS;
+  const matomoList: string[] = data?.matomo ?? [];
+
   const uaLower = ua.toLowerCase();
   let scoreDelta = 0;
   const matches: DBMatch[] = [];
-  const dbFlags: Array<{ type: string; label: string; severity: string }> = [];
+  const dbFlags: RuleFlag[] = [];
   const sourcesHit: string[] = [];
 
   // --- Malware Intel check ---
   let malwareFound = false;
 
   // Exact match
-  const malwareExact = MALWARE_UAS.find(m => {
+  const malwareExact = malwareList.find(m => {
     const mua = stripGlobs(m.ua).toLowerCase();
     return mua.length > 0 && uaLower === mua;
   });
@@ -71,7 +83,9 @@ export function lookupDatabases(ua: string): DBLookupResult {
 
   // Partial match — require >= 12 chars, not noise
   if (!malwareFound) {
-    for (const m of MALWARE_UAS) {
+    let scanned = 0;
+    for (const m of malwareList) {
+      if (scanned++ >= MAX_PARTIAL_SCAN) break;
       const stripped = stripGlobs(m.ua).toLowerCase();
       if (stripped.length < 12) continue;
       if (isNoiseEntry(stripped)) continue;
@@ -99,7 +113,7 @@ export function lookupDatabases(ua: string): DBLookupResult {
   let badBotFound = false;
   if (!malwareFound) {
     // Exact match
-    const badBotExact = BAD_BOTS.find(b => uaLower === b.toLowerCase());
+    const badBotExact = badBotList.find(b => uaLower === b.toLowerCase());
     if (badBotExact) {
       badBotFound = true;
       scoreDelta += 60;
@@ -119,7 +133,9 @@ export function lookupDatabases(ua: string): DBLookupResult {
 
     // Partial match
     if (!badBotFound) {
-      for (const bot of BAD_BOTS) {
+      let scanned = 0;
+      for (const bot of badBotList) {
+        if (scanned++ >= MAX_PARTIAL_SCAN) break;
         const botLower = bot.toLowerCase();
         if (botLower.length < 8) continue;
         if (isNoiseEntry(botLower)) continue;
@@ -146,7 +162,7 @@ export function lookupDatabases(ua: string): DBLookupResult {
 
   // --- Crawler check ---
   let crawlerFound = false;
-  for (const c of LEGITIMATE_CRAWLERS) {
+  for (const c of crawlerList) {
     const cLower = c.toLowerCase();
     if (cLower.length < 8) continue;
     if (isNoiseEntry(cLower)) continue;
@@ -169,6 +185,33 @@ export function lookupDatabases(ua: string): DBLookupResult {
     }
   }
 
+  // --- Matomo bot check (only if not already flagged as a legit crawler) ---
+  if (!crawlerFound) {
+    let scanned = 0;
+    for (const bot of matomoList) {
+      if (scanned++ >= MAX_PARTIAL_SCAN) break;
+      const botLower = bot.toLowerCase();
+      if (botLower.length < 8) continue;
+      if (isNoiseEntry(botLower)) continue;
+      if (uaLower.includes(botLower)) {
+        scoreDelta += 30;
+        matches.push({
+          source: "Matomo Device Detector",
+          matched_pattern: bot,
+          match_type: "partial",
+          score_impact: 30,
+        });
+        dbFlags.push({
+          type: "db_matomo",
+          label: "Bot — Matomo Device Detector",
+          severity: "medium",
+        });
+        sourcesHit.push("Matomo Device Detector");
+        break;
+      }
+    }
+  }
+
   return {
     score_delta: scoreDelta,
     matches,
@@ -176,9 +219,10 @@ export function lookupDatabases(ua: string): DBLookupResult {
     db_score: scoreDelta,
     db_sources_hit: sourcesHit,
     db_counts: {
-      bad_bots: BAD_BOTS.length,
-      malware: MALWARE_UAS.length,
-      crawlers: LEGITIMATE_CRAWLERS.length,
+      bad_bots: badBotList.length,
+      malware: malwareList.length,
+      crawlers: crawlerList.length,
+      matomo: matomoList.length,
     },
   };
 }

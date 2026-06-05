@@ -16,6 +16,7 @@ import {
   getStatsSummary,
 } from './community';
 import { combineScores } from './scorer';
+import { loadThreatData, refreshThreatFeeds, getFeedMeta } from './feeds';
 import { BAD_BOTS } from './data/bad-bots';
 import { MALWARE_UAS } from './data/malware';
 import { LEGITIMATE_CRAWLERS } from './data/crawlers';
@@ -76,8 +77,9 @@ app.post('/analyze', async (c) => {
   // Layer 1: Rule Engine
   const ruleResult = analyzeRuleEngine(ua);
 
-  // Layer 2: DB Lookup
-  const dbResult = lookupDatabases(ua);
+  // Layer 2: DB Lookup — prefer live KV data (weekly cron), fall back to bundle
+  const liveData = await loadThreatData(c.env);
+  const dbResult = lookupDatabases(ua, liveData ?? undefined);
 
   // Layer 3: Community Stats
   const uaHashStr = await hashUA(ua);
@@ -168,25 +170,57 @@ app.get('/stats', async (c) => {
 // ── GET /db-status ────────────────────────────────────────────────────────────
 app.get('/db-status', async (c) => {
   const communityStats = await getStatsSummary(c.env);
+  const meta = await getFeedMeta(c.env);
+  const live = await loadThreatData(c.env);
+  const isLive = live !== null;
+
+  // Live counts from KV when present, otherwise bundled snapshot sizes.
+  const badBotsCount = live?.badBots.length ?? BAD_BOTS.length;
+  const malwareCount = live?.malware.length ?? MALWARE_UAS.length;
+  const crawlersCount = live?.crawlers.length ?? LEGITIMATE_CRAWLERS.length;
+  const matomoCount = live?.matomo.length ?? 0;
+
+  const src = (key: string, fallbackName: string, count: number) => {
+    const m = meta?.sources?.[key];
+    return {
+      name: m?.name ?? fallbackName,
+      loaded: m ? m.ok : true,
+      last_updated: m?.updated ?? 'Bundled at build time',
+      entry_count: m?.count ?? count,
+    };
+  };
+
   return c.json({
-    nginx_bots: { name: 'Nginx Bad Bot Blocker', loaded: true, last_updated: 'Bundled', entry_count: Math.floor(BAD_BOTS.length * 0.4) },
-    apache_bots: { name: 'Apache Bad Bot Blocker', loaded: true, last_updated: 'Bundled', entry_count: Math.floor(BAD_BOTS.length * 0.4) },
-    seclists_ua: { name: 'SecLists UA Database', loaded: true, last_updated: 'Bundled', entry_count: Math.floor(BAD_BOTS.length * 0.2) },
-    mthcht_malware: { name: 'mthcht Malware Intel', loaded: true, last_updated: 'Bundled', entry_count: MALWARE_UAS.length },
-    crawlers: { name: 'Crawler UA Database', loaded: true, last_updated: 'Bundled', entry_count: LEGITIMATE_CRAWLERS.length },
-    matomo_bots: { name: 'Matomo Device Detector', loaded: true, last_updated: 'Bundled', entry_count: 0 },
+    nginx_bots: src('nginx_bots', 'Nginx Bad Bot Blocker', Math.floor(BAD_BOTS.length * 0.4)),
+    apache_bots: src('apache_bots', 'Apache Bad Bot Blocker', Math.floor(BAD_BOTS.length * 0.4)),
+    seclists_ua: src('seclists_ua', 'SecLists UA Database', Math.floor(BAD_BOTS.length * 0.2)),
+    mthcht_malware: src('mthcht_malware', 'mthcht Malware Intel', malwareCount),
+    crawlers: src('crawlers', 'Crawler UA Database', crawlersCount),
+    matomo_bots: src('matomo_bots', 'Matomo Device Detector', matomoCount),
     db_loaded: true,
-    last_auto_update: 'Bundled at deploy time',
-    next_update: 'Next deployment',
+    source: isLive ? 'live (KV, weekly cron)' : 'bundled snapshot',
+    last_auto_update: meta?.last_update ?? 'Bundled at build time',
+    next_update: 'Weekly (Sunday 00:00 UTC) or POST /db-update',
     in_memory: {
-      bad_bots_combined: BAD_BOTS.length,
-      malware_intel: MALWARE_UAS.length,
-      crawlers: LEGITIMATE_CRAWLERS.length,
-      matomo_bots: 0,
-      total: BAD_BOTS.length + MALWARE_UAS.length + LEGITIMATE_CRAWLERS.length,
+      bad_bots_combined: badBotsCount,
+      malware_intel: malwareCount,
+      crawlers: crawlersCount,
+      matomo_bots: matomoCount,
+      total: badBotsCount + malwareCount + crawlersCount + matomoCount,
     },
     community_db: communityStats,
   });
+});
+
+// ── POST /db-update ───────────────────────────────────────────────────────────
+// Manually trigger a threat-feed refresh. Runs in the background; returns at once.
+app.post('/db-update', async (c) => {
+  c.executionCtx.waitUntil(
+    refreshThreatFeeds(c.env)
+      .then((m) => console.log('Manual DB refresh complete:', JSON.stringify(m.counts)))
+      .catch((e) => console.error('Manual DB refresh failed:', e))
+  );
+  return c.json({ success: true, message: 'Threat-feed refresh triggered in the background.' });
 });
 
 // ── GET /health ───────────────────────────────────────────────────────────────
@@ -195,8 +229,9 @@ app.get('/health', (c) => {
 });
 
 // ── GET / ─────────────────────────────────────────────────────────────────────
-// The Workers Site asset serving handles static files from /public.
-// This route is a fallback for non-static requests to root.
+// Workers Assets ([assets] in wrangler.toml) serves /public/index.html at "/"
+// automatically and only invokes this Worker for non-asset paths. This route is
+// a harmless fallback in case the asset isn't matched.
 app.get('/', (c) => {
   return c.redirect('/index.html');
 });
@@ -204,8 +239,13 @@ app.get('/', (c) => {
 // ── Exports ───────────────────────────────────────────────────────────────────
 export default {
   fetch: app.fetch,
-  async scheduled(_event: ScheduledEvent, _env: Env, _ctx: ExecutionContext) {
-    // Weekly cron: placeholder for DB refresh logic
-    console.log('UAIntel weekly cron triggered — DB is bundled, no refresh needed');
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    // Weekly cron: re-fetch the six upstream threat feeds and cache them in KV.
+    console.log('UAIntel weekly cron triggered — refreshing threat feeds...');
+    ctx.waitUntil(
+      refreshThreatFeeds(env)
+        .then((m) => console.log('Cron DB refresh complete:', JSON.stringify(m.counts)))
+        .catch((e) => console.error('Cron DB refresh failed:', e))
+    );
   },
 };
