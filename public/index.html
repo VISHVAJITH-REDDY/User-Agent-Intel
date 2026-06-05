@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>UAIntel — User-Agent Intelligence Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:       #04060f;
+  --bg2:      #070b18;
+  --bg3:      #0b1025;
+  --panel:    #080d1e;
+  --panel2:   #0d1530;
+  --border:   #131d3a;
+  --border2:  #1a2850;
+  --border3:  #243570;
+
+  --indigo:   #6366f1;
+  --indigo2:  #4f52d4;
+  --indigo3:  #3730a3;
+  --cyan:     #22d3ee;
+  --cyan2:    #0891b2;
+  --violet:   #8b5cf6;
+
+  --green:    #10b981;
+  --green2:   #34d399;
+  --yellow:   #f59e0b;
+  --yellow2:  #fcd34d;
+  --orange:   #f97316;
+  --red:      #ef4444;
+  --red2:     #f87171;
+  --purple:   #a78bfa;
+  --teal:     #2dd4bf;
+
+  --text:     #e2e8f8;
+  --text2:    #8892b0;
+  --text3:    #4a5580;
+  --muted:    #2a3560;
+
+  --mono:  'JetBrains Mono', monospace;
+  --sans:  'Outfit', sans-serif;
+
+  --glow-indigo: 0 0 40px rgba(99,102,241,.15);
+  --glow-cyan:   0 0 30px rgba(34,211,238,.12);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+
+/* ── Atmospheric bg ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99,102,241,.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(34,211,238,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(139,92,246,.04) 0%, transparent 70%);
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(99,102,241,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(99,102,241,.04) 1px,transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;z-index:0;
+}
+
+.wrap{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:0 28px 120px}
+
+/* ════════════════════════════════════════
+   HEADER
+════════════════════════════════════════ */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:24px 0 22px;
+  border-bottom:1px solid var(--border2);
+  margin-bottom:32px;
+}
+.brand{display:flex;align-items:center;gap:14px}
+
+/* SVG Logo */
+.logo-svg-wrap{
+  width:48px;height:48px;flex-shrink:0;
+  filter:drop-shadow(0 0 12px rgba(99,102,241,.5));
+}
+
+.brand-text{}
+.brand-name{
+  font-family:var(--sans);font-weight:900;font-size:1.6rem;
+  letter-spacing:-.01em;line-height:1;
+  background:linear-gradient(135deg, #e0e7ff 0%, #a5b4fc 40%, #22d3ee 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.brand-sub{
+  font-family:var(--mono);font-size:.55rem;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--text3);margin-top:3px;
+}
+
+.hstats{display:flex;align-items:center;gap:6px}
+.hstat{
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 20px;
+  background:var(--panel);
+  border:1px solid var(--border2);
+  border-radius:8px;
+}
+.hstat .hv{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--indigo);line-height:1}
+.hstat .hl{font-family:var(--mono);font-size:.5rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin-top:3px}
+.hsep{width:1px;height:36px;background:var(--border2);margin:0 4px}
+.live-badge{
+  display:flex;align-items:center;gap:7px;
+  padding:8px 14px;
+  background:rgba(16,185,129,.08);
+  border:1px solid rgba(16,185,129,.3);
+  border-radius:8px;
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--green2);
+}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green2);animation:livepulse 2s ease-in-out infinite}
+@keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.4)}50%{box-shadow:0 0 0 6px rgba(52,211,153,0)}}
+
+/* ════════════════════════════════════════
+   NAV
+════════════════════════════════════════ */
+.nav{display:flex;gap:2px;margin-bottom:28px;border-bottom:1px solid var(--border)}
+.ntab{
+  font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:10px 20px;background:transparent;border:none;
+  border-bottom:2px solid transparent;color:var(--text3);cursor:pointer;
+  transition:all .2s;display:flex;align-items:center;gap:8px;margin-bottom:-1px;
+}
+.ntab:hover{color:var(--text2)}
+.ntab.on{color:var(--indigo);border-bottom-color:var(--indigo)}
+.ntab .ni{font-size:.85rem}
+.panel{display:none}.panel.on{display:block}
+
+/* ════════════════════════════════════════
+   INPUT SECTION
+════════════════════════════════════════ */
+.input-section{
+  background:var(--panel);
+  border:1px solid var(--border2);
+  border-radius:14px;padding:24px;margin-bottom:20px;
+  position:relative;overflow:hidden;
+}
+.input-section::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--indigo2),var(--cyan2),transparent);
+}
+.ilabel{
+  font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--cyan2);margin-bottom:10px;
+  display:flex;align-items:center;gap:10px;
+}
+.ilabel::after{content:'';flex:1;height:1px;background:var(--border)}
+
+textarea{
+  width:100%;background:var(--bg);border:1px solid var(--border2);
+  border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.8rem;
+  padding:14px 16px;resize:none;height:76px;outline:none;line-height:1.7;
+  transition:border-color .2s,box-shadow .2s;
+}
+textarea:focus{border-color:var(--indigo2);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+textarea::placeholder{color:var(--text3)}
+
+.btn-row{display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap}
+
+.btn-analyze{
+  background:linear-gradient(135deg,var(--indigo2),var(--indigo),var(--cyan2));
+  background-size:200%;
+  border:none;border-radius:8px;color:#fff;
+  font-family:var(--sans);font-weight:700;font-size:.82rem;
+  letter-spacing:.06em;text-transform:uppercase;
+  padding:12px 32px;cursor:pointer;transition:all .25s;
+  display:flex;align-items:center;gap:9px;
+  box-shadow:0 4px 20px rgba(99,102,241,.25);
+}
+.btn-analyze:hover{background-position:100%;transform:translateY(-1px);box-shadow:0 8px 28px rgba(99,102,241,.4)}
+.btn-analyze:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-analyze svg{width:15px;height:15px}
+
+.btn-ghost{
+  background:transparent;border:1px solid var(--border2);border-radius:8px;
+  color:var(--text2);font-family:var(--mono);font-size:.62rem;
+  padding:11px 18px;cursor:pointer;transition:all .2s;
+}
+.btn-ghost:hover{border-color:var(--border3);color:var(--text)}
+
+.samples-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.sample{
+  font-family:var(--mono);font-size:.58rem;padding:4px 11px;
+  border:1px solid var(--border);border-radius:4px;
+  color:var(--text3);cursor:pointer;transition:all .15s;
+  white-space:nowrap;background:none;
+}
+.sample:hover{border-color:var(--indigo3);color:var(--indigo)}
+
+/* ════════════════════════════════════════
+   SPINNER
+════════════════════════════════════════ */
+.spinner{display:none;text-align:center;padding:36px 0}.spinner.on{display:block}
+.scan-track{width:300px;height:2px;background:var(--border);border-radius:2px;margin:0 auto 14px;overflow:hidden}
+.scan-fill{height:100%;background:linear-gradient(90deg,transparent,var(--indigo),var(--cyan),transparent);animation:scanline 1.5s ease-in-out infinite}
+@keyframes scanline{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+.scan-txt{font-family:var(--mono);font-size:.62rem;color:var(--indigo);letter-spacing:.18em;animation:fp 1.2s ease-in-out infinite}
+@keyframes fp{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ════════════════════════════════════════
+   ERROR
+════════════════════════════════════════ */
+.ebox{
+  display:none;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);
+  border-left:3px solid var(--red);border-radius:8px;
+  padding:11px 16px;font-family:var(--mono);font-size:.7rem;color:var(--red2);margin-bottom:16px;
+}
+.ebox.on{display:block}
+
+/* ════════════════════════════════════════
+   RESULTS
+════════════════════════════════════════ */
+#results{display:none;animation:riseIn .35s ease}
+@keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* Malware alert */
+.malware-alert{
+  display:none;
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);
+  border-left:3px solid var(--red);border-radius:8px;
+  padding:13px 18px;margin-bottom:18px;font-family:var(--mono);
+}
+.ma-title{font-size:.72rem;font-weight:700;color:var(--red2);letter-spacing:.06em;margin-bottom:4px}
+.ma-detail{font-size:.64rem;color:var(--text2)}
+
+/* ── Verdict Banner ── */
+.vbanner{
+  border-radius:14px;border:1px solid;padding:26px 30px;margin-bottom:20px;
+  display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;
+  position:relative;overflow:hidden;
+}
+.vbanner::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 100% at 0% 50%, currentColor, transparent);
+  opacity:.04;pointer-events:none;
+}
+.vbanner.legitimate {border-color:rgba(16,185,129,.5); color:var(--green2);}
+.vbanner.suspicious  {border-color:rgba(245,158,11,.5);  color:var(--yellow2);}
+.vbanner.likely      {border-color:rgba(249,115,22,.5);  color:var(--orange);}
+.vbanner.malicious   {border-color:rgba(239,68,68,.5);   color:var(--red2);}
+.vbanner.scanner     {border-color:rgba(239,68,68,.5);   color:var(--red2);}
+.vbanner.bot         {border-color:rgba(167,139,250,.5); color:var(--purple);}
+.vbanner.crawler     {border-color:rgba(16,185,129,.4);  color:var(--green2);}
+.vbanner.automation  {border-color:rgba(249,115,22,.5);  color:var(--orange);}
+.vbanner.fake_combo  {border-color:rgba(249,115,22,.5);  color:var(--orange);}
+.vbanner.http_lib    {border-color:rgba(45,212,191,.4);  color:var(--teal);}
+.vbanner.spoofed     {border-color:rgba(245,158,11,.5);  color:var(--yellow2);}
+
+.sring{
+  width:82px;height:82px;border-radius:50%;border:2px solid currentColor;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:0 0 24px currentColor;flex-shrink:0;position:relative;z-index:1;
+  background:rgba(0,0,0,.3);
+}
+.snum{font-family:var(--mono);font-size:1.65rem;font-weight:700;line-height:1}
+.smax{font-family:var(--mono);font-size:.48rem;letter-spacing:.1em;opacity:.5;margin-top:1px}
+
+.vinfo{position:relative;z-index:1}
+.vcategory{font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;opacity:.65;margin-bottom:5px}
+.vtitle{font-family:var(--sans);font-size:1.9rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;line-height:1}
+.vsub{font-family:var(--mono);font-size:.66rem;color:var(--text2);margin-top:8px;line-height:1.6}
+
+.vchips{display:flex;flex-wrap:wrap;gap:6px;position:relative;z-index:1;justify-content:flex-end;align-items:flex-start}
+.vchip{
+  font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 10px;border-radius:4px;border:1px solid currentColor;
+  background:rgba(0,0,0,.4);
+}
+
+/* Category badges */
+.cat-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.cbadge{
+  font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:6px 14px;border-radius:20px;border:1px solid;
+  display:flex;align-items:center;gap:7px;font-weight:500;
+}
+.cbadge.malicious,.cbadge.scanner{color:var(--red2);border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.07)}
+.cbadge.bot        {color:var(--purple);border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.07)}
+.cbadge.crawler    {color:var(--green2);border-color:rgba(52,211,153,.3); background:rgba(52,211,153,.06)}
+.cbadge.automation {color:var(--orange);border-color:rgba(249,115,22,.35);background:rgba(249,115,22,.07)}
+.cbadge.spoofed,.cbadge.fake_combo{color:var(--yellow2);border-color:rgba(252,211,77,.3);background:rgba(252,211,77,.06)}
+.cbadge.http_lib   {color:var(--teal);  border-color:rgba(45,212,191,.3); background:rgba(45,212,191,.06)}
+.cbadge.legitimate {color:var(--green2);border-color:rgba(52,211,153,.3); background:rgba(52,211,153,.06)}
+.cbadge.suspicious {color:var(--yellow2);border-color:rgba(252,211,77,.3);background:rgba(252,211,77,.06)}
+
+/* Score bar */
+.sbar-wrap{margin-bottom:22px}
+.sbar-track{width:100%;height:5px;background:var(--border);border-radius:3px;overflow:hidden;position:relative}
+.sbar-fill{height:100%;border-radius:3px;width:0%;transition:width .9s cubic-bezier(.4,0,.2,1)}
+.sbar-fill.legitimate,.sbar-fill.crawler{background:linear-gradient(90deg,var(--green),var(--green2))}
+.sbar-fill.suspicious,.sbar-fill.spoofed{background:linear-gradient(90deg,var(--yellow),var(--yellow2))}
+.sbar-fill.likely,.sbar-fill.automation,.sbar-fill.fake_combo{background:linear-gradient(90deg,#ea580c,var(--orange))}
+.sbar-fill.malicious,.sbar-fill.scanner{background:linear-gradient(90deg,#dc2626,var(--red2))}
+.sbar-fill.bot{background:linear-gradient(90deg,var(--violet),var(--purple))}
+.sbar-fill.http_lib{background:linear-gradient(90deg,#0d9488,var(--teal))}
+.sbar-scale{display:flex;justify-content:space-between;margin-top:6px}
+.sbar-scale span{font-family:var(--mono);font-size:.52rem}
+
+/* Grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:800px){.g2{grid-template-columns:1fr}.vbanner{grid-template-columns:auto 1fr}.vchips{justify-content:flex-start}}
+
+/* Cards */
+.card{
+  background:var(--panel);border:1px solid var(--border2);
+  border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--border3),transparent);
+}
+.ctitle{
+  font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--cyan2);margin-bottom:16px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.ctitle-icon{font-size:.9rem;opacity:.8}
+
+/* Info rows */
+.irow{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border)}
+.irow:last-child{border-bottom:none}
+.ik{font-family:var(--mono);font-size:.62rem;color:var(--text3)}
+.iv{font-family:var(--mono);font-size:.64rem;color:var(--text);font-weight:500;text-align:right;max-width:58%;word-break:break-all}
+
+/* UA raw */
+.ua-raw{
+  font-family:var(--mono);font-size:.7rem;color:var(--cyan);
+  background:var(--bg);border:1px solid var(--border2);border-radius:8px;
+  padding:13px 16px;word-break:break-all;line-height:1.8;margin-bottom:18px;
+}
+
+/* Flags */
+.flag-item{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.flag-item:last-child{border-bottom:none}
+.flag-icon{
+  width:34px;height:34px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;flex-shrink:0;
+}
+.flag-icon.malware,.flag-icon.db_malware{background:rgba(239,68,68,.12)}
+.flag-icon.scanner   {background:rgba(239,68,68,.1)}
+.flag-icon.automation{background:rgba(249,115,22,.1)}
+.flag-icon.http_lib  {background:rgba(45,212,191,.08)}
+.flag-icon.fake_combo,.flag-icon.spoofed{background:rgba(245,158,11,.08)}
+.flag-icon.suspicious{background:rgba(245,158,11,.08)}
+.flag-icon.crawler,.flag-icon.db_crawler{background:rgba(16,185,129,.07)}
+.flag-icon.db_bad_bot{background:rgba(249,115,22,.1)}
+.flag-icon.db_matomo {background:rgba(167,139,250,.08)}
+
+.flag-body{flex:1}
+.flag-label{font-family:var(--mono);font-size:.68rem;font-weight:600;margin-bottom:3px}
+.flag-label.malware,.flag-label.db_malware,.flag-label.scanner{color:var(--red2)}
+.flag-label.automation,.flag-label.db_bad_bot{color:var(--orange)}
+.flag-label.http_lib{color:var(--teal)}
+.flag-label.fake_combo,.flag-label.spoofed,.flag-label.suspicious{color:var(--yellow2)}
+.flag-label.crawler,.flag-label.db_crawler{color:var(--green2)}
+.flag-label.db_matomo{color:var(--purple)}
+.flag-desc{font-family:var(--mono);font-size:.6rem;color:var(--text3);line-height:1.5}
+.flag-sev{
+  flex-shrink:0;font-family:var(--mono);font-size:.52rem;
+  letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:4px;
+}
+.flag-sev.critical{background:rgba(239,68,68,.18);color:var(--red2)}
+.flag-sev.high    {background:rgba(249,115,22,.15);color:var(--orange)}
+.flag-sev.medium  {background:rgba(245,158,11,.12);color:var(--yellow2)}
+.flag-sev.low     {background:rgba(99,102,241,.12); color:#a5b4fc}
+.flag-sev.info    {background:rgba(16,185,129,.1);  color:var(--green2)}
+.no-flags{font-family:var(--mono);font-size:.7rem;color:var(--green2);padding:14px 0;text-align:center}
+
+/* Score breakdown */
+.bk-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.bk-label{font-family:var(--mono);font-size:.6rem;color:var(--text2);width:92px;flex-shrink:0}
+.bk-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.bk-fill{height:100%;border-radius:2px;transition:width .8s ease}
+.bk-val{font-family:var(--mono);font-size:.6rem;color:var(--text2);width:26px;text-align:right;flex-shrink:0}
+
+/* Confidence bars */
+.cbar-row{display:flex;align-items:center;gap:10px;margin:7px 0}
+.cbar-lbl{font-family:var(--mono);font-size:.6rem;color:var(--text3);width:68px;flex-shrink:0}
+.cbar-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.cbar-fill{height:100%;border-radius:2px;transition:width .6s ease}
+.cbar-fill.r{background:var(--red)}.cbar-fill.y{background:var(--yellow)}.cbar-fill.g{background:var(--green)}
+.cbar-pct{font-family:var(--mono);font-size:.6rem;width:34px;text-align:right;flex-shrink:0}
+
+/* ════════════════════════════════════════
+   COMMUNITY REPORT — NEW DESIGN
+════════════════════════════════════════ */
+.report-section{
+  background:var(--panel);border:1px solid var(--border2);
+  border-radius:12px;padding:22px;margin-bottom:16px;position:relative;overflow:hidden;
+}
+.report-section::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--indigo2),transparent);
+}
+
+.report-title{
+  font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--cyan2);margin-bottom:18px;
+  display:flex;align-items:center;gap:8px;
+}
+
+/* Step 1 — choose category */
+.report-step{margin-bottom:18px}
+.step-label{
+  font-family:var(--mono);font-size:.58rem;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--text3);margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.step-num{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--indigo3);color:#c7d2fe;
+  font-size:.55rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+
+.cat-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.cat-btn{
+  border:1px solid var(--border2);border-radius:8px;
+  background:var(--bg2);color:var(--text2);
+  font-family:var(--mono);font-size:.62rem;
+  padding:12px 8px;cursor:pointer;transition:all .2s;
+  text-align:center;letter-spacing:.05em;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+}
+.cat-btn .cb-icon{font-size:1.2rem}
+.cat-btn .cb-label{font-size:.58rem;letter-spacing:.08em;text-transform:uppercase}
+.cat-btn:hover{transform:translateY(-2px)}
+.cat-btn.sel-malicious{border-color:var(--red);background:rgba(239,68,68,.1);color:var(--red2);box-shadow:0 0 16px rgba(239,68,68,.15)}
+.cat-btn.sel-bot      {border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple);box-shadow:0 0 16px rgba(167,139,250,.12)}
+.cat-btn.sel-benign   {border-color:var(--green);background:rgba(16,185,129,.08);color:var(--green2);box-shadow:0 0 16px rgba(16,185,129,.1)}
+.cat-btn:not([class*="sel"]):hover.mal-hover{border-color:rgba(239,68,68,.4);color:var(--red2)}
+.cat-btn:not([class*="sel"]):hover.bot-hover{border-color:rgba(167,139,250,.4);color:var(--purple)}
+.cat-btn:not([class*="sel"]):hover.ben-hover{border-color:rgba(16,185,129,.3);color:var(--green2)}
+
+/* Step 2 — comment */
+.comment-input{
+  width:100%;background:var(--bg);border:1px solid var(--border2);
+  border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.72rem;
+  padding:12px 14px;resize:none;height:80px;outline:none;line-height:1.6;
+  transition:border-color .2s,box-shadow .2s;
+}
+.comment-input:focus{border-color:var(--indigo2);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.comment-input::placeholder{color:var(--text3)}
+.comment-input.required-shake{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+.char-count{font-family:var(--mono);font-size:.55rem;color:var(--text3);text-align:right;margin-top:4px}
+.char-count.warn{color:var(--yellow2)}
+
+/* Validation hints */
+.report-hint{
+  font-family:var(--mono);font-size:.62rem;
+  padding:8px 12px;border-radius:6px;margin-top:10px;
+  display:none;align-items:center;gap:8px;
+}
+.report-hint.cat-hint{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#a5b4fc}
+.report-hint.cmt-hint{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--yellow2)}
+.report-hint.show{display:flex}
+
+/* Submit button */
+.btn-submit{
+  width:100%;margin-top:14px;
+  background:linear-gradient(135deg,var(--indigo2),var(--indigo));
+  border:none;border-radius:8px;color:#fff;
+  font-family:var(--sans);font-weight:700;font-size:.8rem;
+  letter-spacing:.06em;text-transform:uppercase;
+  padding:13px;cursor:pointer;transition:all .2s;
+  box-shadow:0 4px 16px rgba(99,102,241,.2);
+}
+.btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(99,102,241,.35)}
+.btn-submit:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Vote counts */
+.vote-counts{display:flex;gap:10px;margin-top:16px}
+.vc-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+}
+.vc-num{font-family:var(--mono);font-size:1.1rem;font-weight:700;line-height:1}
+.vc-lbl{font-family:var(--mono);font-size:.52rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-top:3px}
+.vc-item.vc-m{border-color:rgba(239,68,68,.2)} .vc-item.vc-m .vc-num{color:var(--red2)}
+.vc-item.vc-b{border-color:rgba(167,139,250,.2)} .vc-item.vc-b .vc-num{color:var(--purple)}
+.vc-item.vc-g{border-color:rgba(16,185,129,.2)} .vc-item.vc-g .vc-num{color:var(--green2)}
+
+/* Comments list */
+.comment-item{padding:11px 0;border-bottom:1px solid var(--border)}
+.comment-item:last-child{border-bottom:none}
+.comment-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.ccat{font-family:var(--mono);font-size:.52rem;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:3px}
+.ccat.malicious{background:rgba(239,68,68,.15);color:var(--red2)}
+.ccat.benign   {background:rgba(16,185,129,.1);color:var(--green2)}
+.ccat.bot      {background:rgba(167,139,250,.12);color:var(--purple)}
+.cdate{font-family:var(--mono);font-size:.56rem;color:var(--text3)}
+.ctxt2{font-family:var(--mono);font-size:.68rem;color:var(--text2);line-height:1.6}
+
+/* Legend */
+.legend{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  margin-bottom:22px;padding:14px 18px;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+}
+.leg-title{font-family:var(--mono);font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);width:100%;margin-bottom:2px}
+.leg-item{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.6rem;color:var(--text2)}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Recently reported */
+.recent-item{
+  display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;
+  padding:12px 10px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .15s;border-radius:6px;
+}
+.recent-item:hover{background:rgba(99,102,241,.04)}
+.recent-item:last-child{border-bottom:none}
+.ri-ua{font-family:var(--mono);font-size:.64rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ri-v{font-family:var(--mono);font-size:.58rem;padding:2px 9px;border-radius:3px;white-space:nowrap}
+.ri-s{font-family:var(--mono);font-size:.64rem;font-weight:700;min-width:26px;text-align:right}
+
+/* DB Status */
+.mem-panel{background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:20px 24px;margin-bottom:18px}
+.mem-title{font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan2);margin-bottom:14px}
+.mem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:600px){.mem-grid{grid-template-columns:1fr 1fr}}
+.mem-item{text-align:center;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px}
+.mem-val{font-family:var(--mono);font-size:1.15rem;font-weight:700;color:var(--indigo)}
+.mem-lbl{font-family:var(--mono);font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-top:4px}
+
+.db-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:700px){.db-grid{grid-template-columns:1fr 1fr}}
+.db-card{background:var(--panel);border:1px solid var(--border2);border-radius:10px;padding:16px 18px}
+.db-name{font-family:var(--mono);font-size:.64rem;color:var(--text);margin-bottom:10px;font-weight:600}
+.db-row{display:flex;justify-content:space-between;margin-bottom:4px}
+.db-k{font-family:var(--mono);font-size:.56rem;color:var(--text3)}
+.db-v{font-family:var(--mono);font-size:.56rem;color:var(--text2)}
+.db-dot{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.58rem}
+.db-dot::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.db-dot.ok{color:var(--green2)}.db-dot.ok::before{background:var(--green2);box-shadow:0 0 6px var(--green2)}
+.db-dot.err{color:var(--red2)}.db-dot.err::before{background:var(--red2)}
+
+.db-actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn-db{
+  background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);
+  border-radius:8px;color:#a5b4fc;font-family:var(--mono);font-size:.62rem;
+  padding:10px 20px;cursor:pointer;transition:all .2s;letter-spacing:.08em;
+}
+.btn-db:hover{background:rgba(99,102,241,.18)}
+.update-msg{font-family:var(--mono);font-size:.62rem;color:var(--text2);padding:8px 0}
+.sched-panel{background:var(--panel);border:1px solid var(--border2);border-radius:10px;padding:18px 22px;margin-top:16px}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:28px;right:28px;
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:10px;padding:13px 22px;
+  font-family:var(--mono);font-size:.7rem;color:var(--text);
+  transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);
+  z-index:999;max-width:340px;box-shadow:0 12px 40px rgba(0,0,0,.5);
+}
+.toast.on{transform:translateY(0);opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ══════════════════════════ HEADER ══════════════════════════ -->
+<header>
+  <div class="brand">
+    <!-- Professional SVG Shield Logo -->
+    <div class="logo-svg-wrap">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="shieldG" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#6366f1"/>
+            <stop offset="50%" stop-color="#8b5cf6"/>
+            <stop offset="100%" stop-color="#22d3ee"/>
+          </linearGradient>
+          <linearGradient id="innerG" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#a5b4fc" stop-opacity=".9"/>
+            <stop offset="100%" stop-color="#67e8f9" stop-opacity=".9"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- Outer shield -->
+        <path d="M24 3L6 10v12c0 10.5 7.7 20.3 18 22.9C35.3 42.3 42 32.5 42 22V10L24 3z"
+              fill="url(#shieldG)" opacity=".9"/>
+        <!-- Inner shield outline -->
+        <path d="M24 7L10 13v9c0 8.2 6 15.8 14 17.9C32 37.8 38 30.2 38 22v-9L24 7z"
+              fill="none" stroke="url(#innerG)" stroke-width="1" opacity=".6"/>
+        <!-- UA letters -->
+        <text x="24" y="28" font-family="JetBrains Mono,monospace" font-size="11"
+              font-weight="700" fill="white" text-anchor="middle"
+              filter="url(#glow)" letter-spacing="-0.5">UA</text>
+        <!-- Top accent line -->
+        <path d="M18 18 L24 15 L30 18" stroke="url(#innerG)" stroke-width="1.2"
+              stroke-linecap="round" fill="none" opacity=".8"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">UAIntel</div>
+      <div class="brand-sub">User-Agent Intelligence Platform</div>
+    </div>
+  </div>
+
+  <div class="hstats">
+    <div class="hstat"><div class="hv" id="hs-analyzed">—</div><div class="hl">Analyzed</div></div>
+    <div class="hsep"></div>
+    <div class="hstat"><div class="hv" id="hs-malicious">—</div><div class="hl">Malicious</div></div>
+    <div class="hsep"></div>
+    <div class="hstat"><div class="hv" id="hs-patterns">—</div><div class="hl">DB Patterns</div></div>
+    <div class="hsep"></div>
+    <div class="hstat"><div class="hv" id="hs-reports">—</div><div class="hl">Reports</div></div>
+    <div class="hsep"></div>
+    <div class="live-badge"><div class="live-dot"></div>Live</div>
+  </div>
+</header>
+
+<!-- ══════════════════════════ NAV ══════════════════════════ -->
+<div class="nav">
+  <button class="ntab on" onclick="goTab('analyze',this)"><span class="ni">⚡</span>Analyze</button>
+  <button class="ntab" onclick="goTab('recent',this);loadRecent()"><span class="ni">🕐</span>Recently Reported</button>
+  <button class="ntab" onclick="goTab('dbstatus',this);loadDbStatus()"><span class="ni">🗄</span>Database Status</button>
+</div>
+
+<!-- ══════════════════════════ ANALYZE ══════════════════════════ -->
+<div class="panel on" id="tab-analyze">
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="leg-title">Detection Category Reference</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--red2)"></div>Malicious</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--red2);opacity:.7"></div>Scanner</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>Bot</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--green2)"></div>Crawler</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--orange)"></div>Automation</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--yellow2)"></div>Spoofed UA</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--yellow2);opacity:.7"></div>Fake OS/Browser Combo</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--teal)"></div>HTTP Library</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--green2);opacity:.6"></div>Legitimate</div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-section">
+    <div class="ilabel">Paste User-Agent String</div>
+    <textarea id="uaInput" placeholder="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ..."></textarea>
+    <div class="btn-row">
+      <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        Analyze UA
+      </button>
+      <button class="btn-ghost" onclick="clearAll()">Clear</button>
+    </div>
+    <div class="samples-row" id="samplesRow"></div>
+  </div>
+
+  <div class="ebox" id="ebox"></div>
+
+  <div class="spinner" id="spinner">
+    <div class="scan-track"><div class="scan-fill"></div></div>
+    <div class="scan-txt" id="stxt">INITIALIZING ANALYSIS ENGINE...</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <div class="malware-alert" id="malwareAlert">
+      <div class="ma-title">⚠ CONFIRMED MALWARE UA DETECTED</div>
+      <div class="ma-detail" id="malwareDetail"></div>
+    </div>
+
+    <!-- Verdict Banner -->
+    <div class="vbanner" id="vbanner">
+      <div class="sring" id="sring">
+        <div class="snum" id="snum">0</div>
+        <div class="smax">/100</div>
+      </div>
+      <div class="vinfo">
+        <div class="vcategory" id="vcategory">Category</div>
+        <div class="vtitle" id="vtitle">Verdict</div>
+        <div class="vsub" id="vsub"></div>
+      </div>
+      <div class="vchips" id="vchips"></div>
+    </div>
+
+    <!-- Category badges -->
+    <div class="cat-tags" id="catTags"></div>
+
+    <!-- UA raw -->
+    <div class="ua-raw" id="rabox"></div>
+
+    <!-- Score bar -->
+    <div class="sbar-wrap">
+      <div style="display:flex;justify-content:space-between;margin-bottom:7px">
+        <span style="font-family:var(--mono);font-size:.58rem;color:var(--text3)">RISK SCORE</span>
+        <span style="font-family:var(--mono);font-size:.58rem;color:var(--text2)" id="scoreLabel">0 / 100</span>
+      </div>
+      <div class="sbar-track"><div class="sbar-fill" id="sbarfill"></div></div>
+      <div class="sbar-scale">
+        <span style="color:var(--green2)">Legitimate</span>
+        <span style="color:var(--yellow2)">Suspicious</span>
+        <span style="color:var(--orange)">Likely Malicious</span>
+        <span style="color:var(--red2)">Malicious</span>
+      </div>
+    </div>
+
+    <!-- Row 1: Parsed + Flags -->
+    <div class="g2">
+      <div class="card">
+        <div class="ctitle"><span>UA Parsed Details</span><span class="ctitle-icon">🔍</span></div>
+        <div id="parsedCard"></div>
+      </div>
+      <div class="card">
+        <div class="ctitle"><span>Detection Flags</span><span class="ctitle-icon">🚩</span></div>
+        <div id="flagsCard"></div>
+      </div>
+    </div>
+
+    <!-- Row 2: Sources + Score -->
+    <div class="g2">
+      <div class="card">
+        <div class="ctitle"><span>Detection Sources</span><span class="ctitle-icon">📡</span></div>
+        <div id="sourcesCard"></div>
+      </div>
+      <div class="card">
+        <div class="ctitle"><span>Score Breakdown</span><span class="ctitle-icon">📊</span></div>
+        <div id="scoreCard"></div>
+      </div>
+    </div>
+
+    <!-- Community Intel -->
+    <div class="g2">
+      <div class="card">
+        <div class="ctitle"><span>Community Intelligence</span><span class="ctitle-icon">📈</span></div>
+        <div id="commCard"></div>
+      </div>
+      <div class="card" id="commentsCard" style="display:none">
+        <div class="ctitle"><span>Community Reports</span><span class="ctitle-icon">💬</span></div>
+        <div id="clist"></div>
+      </div>
+    </div>
+
+    <!-- ══ COMMUNITY REPORT FORM — NEW ══ -->
+    <div class="report-section">
+      <div class="report-title">
+        <span>📝</span> Submit Community Report
+      </div>
+
+      <!-- Step 1: Category -->
+      <div class="report-step">
+        <div class="step-label"><div class="step-num">1</div>Select a category — required</div>
+        <div class="cat-btns">
+          <button class="cat-btn mal-hover" id="catBtn-malicious" onclick="selectCat('malicious',this)">
+            <span class="cb-icon">🔴</span>
+            <span class="cb-label">Malicious</span>
+          </button>
+          <button class="cat-btn bot-hover" id="catBtn-bot" onclick="selectCat('bot',this)">
+            <span class="cb-icon">🤖</span>
+            <span class="cb-label">Bot / Scanner</span>
+          </button>
+          <button class="cat-btn ben-hover" id="catBtn-benign" onclick="selectCat('benign',this)">
+            <span class="cb-icon">🟢</span>
+            <span class="cb-label">Legitimate</span>
+          </button>
+        </div>
+        <div class="report-hint cat-hint" id="hintCat">⚠ Please select a category above before submitting.</div>
+      </div>
+
+      <!-- Step 2: Comment -->
+      <div class="report-step">
+        <div class="step-label"><div class="step-num">2</div>Add a comment — required</div>
+        <textarea class="comment-input" id="commentTxt"
+          placeholder="Describe why you are reporting this UA. E.g. 'This is a known scraper from our logs targeting /api/products every 2 seconds.' — minimum 10 characters required."
+          oninput="onCommentInput()"></textarea>
+        <div class="char-count" id="charCount">0 / 500</div>
+        <div class="report-hint cmt-hint" id="hintCmt">⚠ Comment must be at least 10 characters.</div>
+      </div>
+
+      <!-- Submit -->
+      <button class="btn-submit" id="submitBtn" onclick="submitReport()">
+        Submit Report
+      </button>
+
+      <!-- Vote counts display -->
+      <div class="vote-counts">
+        <div class="vc-item vc-m"><div class="vc-num" id="vm">0</div><div class="vc-lbl">Malicious</div></div>
+        <div class="vc-item vc-b"><div class="vc-num" id="vbot">0</div><div class="vc-lbl">Bot</div></div>
+        <div class="vc-item vc-g"><div class="vc-num" id="vb">0</div><div class="vc-lbl">Legit</div></div>
+      </div>
+    </div>
+
+  </div><!-- /results -->
+</div><!-- /analyze -->
+
+<!-- ══════════════════════════ RECENTLY REPORTED ══════════════════════════ -->
+<div class="panel" id="tab-recent">
+  <div class="card">
+    <div class="ctitle"><span>Recently Analyzed &amp; Reported User-Agents</span><span class="ctitle-icon">🕐</span></div>
+    <div id="rlist"><div style="font-family:var(--mono);font-size:.7rem;color:var(--text3);padding:24px;text-align:center">Loading...</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ DATABASE STATUS ══════════════════════════ -->
+<div class="panel" id="tab-dbstatus">
+  <div class="mem-panel">
+    <div class="mem-title">Combined In Memory</div>
+    <div class="mem-grid">
+      <div class="mem-item"><div class="mem-val" id="m-badbots">—</div><div class="mem-lbl">Bad Bots</div></div>
+      <div class="mem-item"><div class="mem-val" id="m-malware">—</div><div class="mem-lbl">Malware Intel</div></div>
+      <div class="mem-item"><div class="mem-val" id="m-crawlers">—</div><div class="mem-lbl">Crawlers</div></div>
+      <div class="mem-item"><div class="mem-val" id="m-total">—</div><div class="mem-lbl">Total Patterns</div></div>
+    </div>
+  </div>
+  <div class="db-grid" id="dbGrid"></div>
+  <div class="db-actions">
+    <button class="btn-db" onclick="triggerUpdate()">⟳ Update All Databases</button>
+    <button class="btn-db" onclick="loadDbStatus()">↺ Refresh</button>
+  </div>
+  <div class="update-msg" id="updateMsg"></div>
+  <div class="sched-panel">
+    <div class="ctitle" style="margin-bottom:10px"><span>Auto-Update Schedule</span></div>
+    <div id="schedInfo" style="font-family:var(--mono);font-size:.64rem;color:var(--text2)">Loading...</div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+let CUR_UA = '';
+let SELECTED_CAT = '';
+
+const SAMPLES = [
+  {label:'Chrome/Win',     ua:'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'},
+  {label:'Firefox',        ua:'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'},
+  {label:'python-requests',ua:'python-requests/2.31.0'},
+  {label:'curl',           ua:'curl/8.5.0'},
+  {label:'sqlmap',         ua:'sqlmap/1.7.8#stable (https://sqlmap.org)'},
+  {label:'Googlebot',      ua:'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'},
+  {label:'Spoofed',        ua:'Mozilla/5.0 (iPhone; Windows NT 10.0) AppleWebKit/537.36'},
+  {label:'Headless',       ua:'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 HeadlessChrome/122.0.0.0 Safari/537.36'},
+  {label:'GPTBot',         ua:'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0; +https://openai.com/gptbot)'},
+];
+
+const FICONS={malware:'☠',db_malware:'☠',scanner:'🎯',automation:'⚙',http_lib:'📡',fake_combo:'⚠',spoofed:'🎭',suspicious:'🎭',crawler:'🕷',db_crawler:'🕷',db_bad_bot:'🚫',db_matomo:'🤖'};
+const FDESC={
+  malware:'Known malware / stealer / RAT UA pattern',
+  db_malware:'Confirmed in mthcht malware UA intelligence database',
+  scanner:'Security scanning or vulnerability assessment tool',
+  automation:'Browser automation / headless testing framework',
+  http_lib:'Raw HTTP library — not a real browser',
+  fake_combo:'OS and browser combination is physically impossible',
+  spoofed:'Internal UA version/token inconsistency detected',
+  suspicious:'Matches known suspicious or spoofed UA signatures',
+  crawler:'Verified legitimate search engine crawler',
+  db_crawler:'Listed in crawler UA database',
+  db_bad_bot:'Listed in bad bot blocklist database',
+  db_matomo:'Classified as bot by Matomo Device Detector',
+};
+const SEV={critical:0,high:1,medium:2,low:3,info:4};
+const DB_NAMES={nginx_bots:'Nginx Bad Bot Blocker',apache_bots:'Apache Bad Bot Blocker',seclists_ua:'SecLists UA Database',mthcht_malware:'mthcht Malware Intel',crawlers:'Crawler UA Database',matomo_bots:'Matomo Device Detector'};
+const VCOLS={'Malicious':'var(--red2)','Likely Malicious':'var(--orange)','Suspicious':'var(--yellow2)','Legitimate':'var(--green2)'};
+
+function getVClass(d){
+  const t=d.flags.map(f=>f.type);
+  if(t.includes('fake_combo'))                         return 'fake_combo';
+  if(t.includes('spoofed'))                            return 'spoofed';
+  if(t.includes('malware')||t.includes('db_malware'))  return 'malicious';
+  if(t.includes('scanner'))                            return 'scanner';
+  if(t.includes('automation'))                         return 'automation';
+  if(t.includes('crawler')||t.includes('db_crawler'))  return 'crawler';
+  if(t.includes('db_matomo')||t.includes('db_bad_bot'))return 'bot';
+  if(t.includes('http_lib'))                           return 'http_lib';
+  if(t.includes('suspicious'))                         return 'suspicious';
+  const c=d.verdict_color;
+  if(c==='green') return 'legitimate';
+  if(c==='yellow') return 'suspicious';
+  if(c==='orange') return 'likely';
+  return 'malicious';
+}
+
+function getCatLabel(d){
+  const t=d.flags.map(f=>f.type);
+  if(t.includes('malware')||t.includes('db_malware')) return 'Threat Intelligence';
+  if(t.includes('scanner'))   return 'Security Scanner';
+  if(t.includes('automation'))return 'Automation Framework';
+  if(t.includes('http_lib'))  return 'HTTP Library';
+  if(t.includes('fake_combo'))return 'UA Spoofing Detected';
+  if(t.includes('spoofed'))   return 'Version Inconsistency';
+  if(t.includes('crawler')||t.includes('db_crawler')) return 'Known Crawler';
+  if(t.includes('db_matomo')||t.includes('db_bad_bot')) return 'Known Bot';
+  if(d.risk_score<=20)        return 'Verified Browser';
+  return 'Behavioral Analysis';
+}
+
+function getCatBadges(d){
+  const t=d.flags.map(f=>f.type),cats=[];
+  if(t.includes('malware')||t.includes('db_malware')) cats.push({cls:'malicious',icon:'☠',label:'Malware'});
+  if(t.includes('scanner'))   cats.push({cls:'scanner',icon:'🎯',label:'Scanner'});
+  if(t.includes('automation'))cats.push({cls:'automation',icon:'⚙',label:'Automation Tool'});
+  if(t.includes('http_lib'))  cats.push({cls:'http_lib',icon:'📡',label:'HTTP Library'});
+  if(t.includes('fake_combo'))cats.push({cls:'fake_combo',icon:'⚠',label:'Fake OS/Browser Combo'});
+  if(t.includes('spoofed'))   cats.push({cls:'spoofed',icon:'🎭',label:'Version Spoofed'});
+  if(t.includes('suspicious'))cats.push({cls:'suspicious',icon:'🎭',label:'Suspicious'});
+  if(t.includes('crawler')||t.includes('db_crawler')) cats.push({cls:'crawler',icon:'🕷',label:'Known Crawler'});
+  if(t.includes('db_matomo')||t.includes('db_bad_bot')) cats.push({cls:'bot',icon:'🤖',label:'Known Bot'});
+  if(!cats.length) cats.push(d.risk_score<=20?{cls:'legitimate',icon:'✅',label:'Legitimate Browser'}:{cls:'suspicious',icon:'⚠',label:'Suspicious'});
+  return cats;
+}
+
+/* ── Tabs ── */
+function goTab(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+name).classList.add('on');
+  btn.classList.add('on');
+}
+
+/* ── Samples ── */
+(function(){
+  const row=document.getElementById('samplesRow');
+  SAMPLES.forEach(s=>{
+    const el=document.createElement('button');
+    el.className='sample';el.textContent=s.label;el.title=s.ua;
+    el.onclick=()=>{document.getElementById('uaInput').value=s.ua;};
+    row.appendChild(el);
+  });
+})();
+
+/* ── Clear ── */
+function clearAll(){
+  document.getElementById('uaInput').value='';
+  document.getElementById('results').style.display='none';
+  document.getElementById('ebox').classList.remove('on');
+  document.getElementById('malwareAlert').style.display='none';
+  resetReportForm();
+}
+
+/* ── Community Category Selection ── */
+function selectCat(cat, btn){
+  SELECTED_CAT = cat;
+  document.querySelectorAll('.cat-btn').forEach(b=>{
+    b.className = b.className.replace(/\s*sel-\w+/g,'');
+  });
+  btn.classList.add('sel-'+cat);
+  document.getElementById('hintCat').classList.remove('show');
+}
+
+/* ── Comment input ── */
+function onCommentInput(){
+  const val=document.getElementById('commentTxt').value;
+  const len=val.length;
+  const cc=document.getElementById('charCount');
+  cc.textContent=len+' / 500';
+  cc.className='char-count'+(len>450?' warn':'');
+  if(len>=10) document.getElementById('hintCmt').classList.remove('show');
+}
+
+function resetReportForm(){
+  SELECTED_CAT='';
+  document.querySelectorAll('.cat-btn').forEach(b=>b.className=b.className.replace(/\s*sel-\w+/g,''));
+  document.getElementById('commentTxt').value='';
+  document.getElementById('charCount').textContent='0 / 500';
+  document.getElementById('hintCat').classList.remove('show');
+  document.getElementById('hintCmt').classList.remove('show');
+}
+
+/* ── Submit Report (with validation) ── */
+async function submitReport(){
+  if(!CUR_UA){showToast('⚠ Analyze a UA first!');return;}
+
+  let valid = true;
+
+  // Validate category
+  if(!SELECTED_CAT){
+    document.getElementById('hintCat').classList.add('show');
+    valid = false;
+  }
+
+  // Validate comment
+  const comment = document.getElementById('commentTxt').value.trim();
+  if(comment.length < 10){
+    document.getElementById('hintCmt').classList.add('show');
+    const ta = document.getElementById('commentTxt');
+    ta.classList.add('required-shake');
+    setTimeout(()=>ta.classList.remove('required-shake'),500);
+    valid = false;
+  }
+
+  if(!valid) return;
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try{
+    const resp=await fetch(API+'/report',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_agent:CUR_UA,category:SELECTED_CAT,comment})
+    });
+    const data=await resp.json();
+    if(data.success){
+      showToast('✅ Reported as '+SELECTED_CAT+' — thank you!');
+      const m={malicious:'vm',bot:'vbot',benign:'vb'};
+      const el=document.getElementById(m[SELECTED_CAT]);
+      if(el)el.textContent=parseInt(el.textContent)+1;
+      resetReportForm();
+      loadStats();
+    }
+  }catch(e){showToast('❌ Report failed — backend running?');}
+  finally{
+    btn.disabled=false;
+    btn.textContent='Submit Report';
+  }
+}
+
+/* ── Analyze ── */
+async function runAnalysis(){
+  const ua=document.getElementById('uaInput').value.trim();
+  if(!ua){showErr('Please paste a User-Agent string.');return;}
+  CUR_UA=ua;
+  resetReportForm();
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true;
+  document.getElementById('ebox').classList.remove('on');
+  document.getElementById('results').style.display='none';
+  document.getElementById('malwareAlert').style.display='none';
+  document.getElementById('spinner').classList.add('on');
+  const steps=['RUNNING RULE ENGINE...','CHECKING BAD BOT DATABASE...','CHECKING MALWARE INTEL...','CHECKING COMMUNITY DB...','COMBINING SCORES...'];
+  let si=0;const stxt=document.getElementById('stxt');
+  const iv=setInterval(()=>{stxt.textContent=steps[Math.min(si++,steps.length-1)];},700);
+  try{
+    const resp=await fetch(API+'/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_agent:ua})});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    if(data.error) throw new Error(data.error);
+    renderResults(ua,data);loadStats();
+  }catch(e){showErr('Analysis failed: '+e.message+' — check network or try again.');}
+  finally{clearInterval(iv);btn.disabled=false;document.getElementById('spinner').classList.remove('on');}
+}
+
+/* ── Render ── */
+function renderResults(ua,d){
+  const score=d.risk_score;
+  const vc=getVClass(d);
+
+  const mf=d.flags.find(f=>f.type==='db_malware'||f.type==='malware');
+  if(mf){
+    document.getElementById('malwareAlert').style.display='block';
+    document.getElementById('malwareDetail').textContent=mf.label+(mf.category?' — Category: '+mf.category:'');
+  }
+
+  const banner=document.getElementById('vbanner');
+  banner.className='vbanner '+vc;
+  const col=getComputedStyle(banner).color;
+  const ring=document.getElementById('sring');
+  ring.style.borderColor=col;ring.style.boxShadow='0 0 24px '+col;ring.style.color=col;
+  document.getElementById('snum').textContent=score;
+  document.getElementById('vcategory').textContent=getCatLabel(d);
+  const vt=document.getElementById('vtitle');vt.textContent=d.verdict;vt.style.color=col;
+  document.getElementById('vsub').textContent=score<=20
+    ?'No significant threats detected across all detection layers.'
+    :d.flag_count+' flag'+(d.flag_count!==1?'s':'')+' detected across '+d.detection_sources.length+' source'+(d.detection_sources.length!==1?'s':'')+'.';
+
+  const types=[...new Set(d.flags.map(f=>f.type))];
+  document.getElementById('vchips').innerHTML=types.map(t=>'<span class="vchip">'+t.replace(/_/g,' ')+'</span>').join('');
+  document.getElementById('catTags').innerHTML=getCatBadges(d).map(c=>'<div class="cbadge '+c.cls+'">'+c.icon+' '+c.label+'</div>').join('');
+
+  document.getElementById('scoreLabel').textContent=score+' / 100';
+  const fill=document.getElementById('sbarfill');
+  fill.className='sbar-fill '+vc;
+  setTimeout(()=>fill.style.width=score+'%',50);
+
+  document.getElementById('rabox').textContent=ua;
+
+  const p=d.parsed;
+  document.getElementById('parsedCard').innerHTML=[
+    ['Browser',p.browser+(p.browser_version?' '+p.browser_version:'')],
+    ['OS',p.os+(p.os_version?' '+p.os_version:'')],
+    ['Device',p.device],['Engine',p.engine],['Length',p.raw.length+' chars'],
+  ].map(([k,v])=>ir(k,esc(v))).join('');
+
+  const fe=document.getElementById('flagsCard');
+  if(!d.flags.length){fe.innerHTML='<div class="no-flags">✅ No threats detected</div>';}
+  else{
+    const sorted=[...d.flags].sort((a,b)=>(SEV[a.severity]||9)-(SEV[b.severity]||9));
+    fe.innerHTML=sorted.map(f=>`
+      <div class="flag-item">
+        <div class="flag-icon ${f.type}">${FICONS[f.type]||'⚡'}</div>
+        <div class="flag-body">
+          <div class="flag-label ${f.type}">${esc(f.label)}</div>
+          <div class="flag-desc">${FDESC[f.type]||''}${f.category?' · '+f.category:''}</div>
+        </div>
+        <div class="flag-sev ${f.severity||'medium'}">${f.severity||'medium'}</div>
+      </div>`).join('');
+  }
+
+  const se=document.getElementById('sourcesCard');
+  const counts=d.db_counts||{};
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  se.innerHTML=(!d.detection_sources.length
+    ?'<div style="font-family:var(--mono);font-size:.7rem;color:var(--green2);padding:8px 0">✅ No malicious sources triggered</div>'
+    :d.detection_sources.map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--indigo);box-shadow:0 0 6px var(--indigo);flex-shrink:0"></div>
+        <span style="font-family:var(--mono);font-size:.65rem;color:var(--text)">${esc(s)}</span>
+      </div>`).join('')
+  )+`<div style="font-family:var(--mono);font-size:.6rem;color:${d.db_loaded?'var(--green2)':'var(--yellow2)'};margin-top:10px">
+    ${d.db_loaded?'✅ '+total.toLocaleString()+' patterns checked':'⚠ Databases loading...'}
+  </div>`;
+
+  const sb=d.score_breakdown||{};
+  document.getElementById('scoreCard').innerHTML=[
+    ['Rule Engine',sb.rule_engine||0,'var(--indigo)'],
+    ['DB Engine',Math.max(0,sb.db_delta||0),'var(--orange)'],
+    ['Community',sb.community_boost||0,'var(--purple)'],
+  ].map(([k,v,c])=>`<div class="bk-row">
+    <span class="bk-label">${k}</span>
+    <div class="bk-track"><div class="bk-fill" style="width:${Math.min(v,100)}%;background:${c}"></div></div>
+    <span class="bk-val">${v}</span></div>`).join('')
+  +`<div class="bk-row" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+    <span class="bk-label" style="color:var(--text)">Final</span>
+    <div class="bk-track"><div class="bk-fill" style="width:${score}%;background:${col}"></div></div>
+    <span class="bk-val" style="color:var(--indigo)">${score}</span></div>`;
+
+  renderCommStats(d.community);
+  const c=d.community;
+  document.getElementById('vm').textContent=c.found?c.malicious_votes:0;
+  document.getElementById('vbot').textContent=c.found?c.bot_votes:0;
+  document.getElementById('vb').textContent=c.found?c.benign_votes:0;
+  renderComments(c.found?c.comments:[]);
+
+  document.getElementById('results').style.display='block';
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderCommStats(c){
+  const el=document.getElementById('commCard');
+  if(!c||!c.found){
+    el.innerHTML='<div style="font-family:var(--mono);font-size:.68rem;color:var(--text3);padding:16px 0;text-align:center">First time analyzed.<br><span style="color:var(--indigo);opacity:.7">Submit the first report below!</span></div>';
+    return;
+  }
+  const tv=c.total_votes||0;
+  const benPct=tv?Math.round(c.benign_votes/tv*100):0;
+  const botPct=tv?Math.round(c.bot_votes/tv*100):0;
+  el.innerHTML=[
+    ir('Total Lookups',c.total_lookups.toLocaleString()),
+    ir('First Seen',c.first_seen),ir('Last Seen',c.last_seen),ir('Total Votes',tv),
+    `<div class="cbar-row"><span class="cbar-lbl">Malicious</span><div class="cbar-track"><div class="cbar-fill r" style="width:${c.confidence_malicious}%"></div></div><span class="cbar-pct" style="color:var(--red2)">${c.confidence_malicious}%</span></div>`,
+    `<div class="cbar-row"><span class="cbar-lbl">Bot</span><div class="cbar-track"><div class="cbar-fill y" style="width:${botPct}%"></div></div><span class="cbar-pct" style="color:var(--yellow2)">${botPct}%</span></div>`,
+    `<div class="cbar-row"><span class="cbar-lbl">Benign</span><div class="cbar-track"><div class="cbar-fill g" style="width:${benPct}%"></div></div><span class="cbar-pct" style="color:var(--green2)">${benPct}%</span></div>`,
+  ].join('');
+}
+
+function renderComments(comments){
+  const valid=comments.filter(c=>c.comment);
+  const card=document.getElementById('commentsCard');
+  if(!valid.length){card.style.display='none';return;}
+  card.style.display='block';
+  document.getElementById('clist').innerHTML=valid.map(c=>`
+    <div class="comment-item">
+      <div class="comment-meta">
+        <span class="ccat ${c.category}">${c.category}</span>
+        <span class="cdate">${c.created_at}</span>
+      </div>
+      <div class="ctxt2">${esc(c.comment)}</div>
+    </div>`).join('');
+}
+
+/* ── Recent ── */
+async function loadRecent(){
+  const el=document.getElementById('rlist');
+  try{
+    const data=await fetch(API+'/recent').then(r=>r.json());
+    if(!data.length){el.innerHTML='<div style="font-family:var(--mono);font-size:.7rem;color:var(--text3);padding:24px;text-align:center">No reports yet.</div>';return;}
+    el.innerHTML=data.map(r=>`
+      <div class="recent-item" onclick="analyzeFrom('${esc(r.ua_string)}')">
+        <div class="ri-ua" title="${esc(r.ua_string)}">${esc(r.ua_string)}</div>
+        <div class="ri-v" style="background:rgba(0,0,0,.3);border:1px solid ${VCOLS[r.verdict]||'var(--text3)'};color:${VCOLS[r.verdict]||'var(--text3)'}">${r.verdict}</div>
+        <div class="ri-s" style="color:${VCOLS[r.verdict]||'var(--text3)'}">${r.risk_score}</div>
+      </div>`).join('');
+  }catch(e){el.innerHTML='<div style="font-family:var(--mono);font-size:.7rem;color:var(--red2);padding:24px">Failed to load — backend running?</div>';}
+}
+
+function analyzeFrom(ua){
+  document.getElementById('uaInput').value=ua;
+  goTab('analyze',document.querySelector('.ntab'));
+  runAnalysis();
+}
+
+/* ── DB Status ── */
+async function loadDbStatus(){
+  try{
+    const data=await fetch(API+'/db-status').then(r=>r.json());
+    const mem=data.in_memory||{};
+    document.getElementById('m-badbots').textContent=(mem.bad_bots_combined||0).toLocaleString();
+    document.getElementById('m-malware').textContent=(mem.malware_intel||0).toLocaleString();
+    document.getElementById('m-crawlers').textContent=(mem.crawlers||0).toLocaleString();
+    document.getElementById('m-total').textContent=(mem.total||0).toLocaleString();
+    document.getElementById('dbGrid').innerHTML=Object.entries(DB_NAMES).map(([key,name])=>{
+      const src=data[key]||{};const ok=src.loaded;
+      return `<div class="db-card">
+        <div class="db-name">${name}</div>
+        <div class="db-row"><span class="db-k">Status</span><span class="db-dot ${ok?'ok':'err'}">${ok?'Loaded':'Not loaded'}</span></div>
+        <div class="db-row"><span class="db-k">Entries</span><span class="db-v" style="color:${ok?'var(--indigo)':'var(--text3)'}">${(src.entry_count||0).toLocaleString()}</span></div>
+        <div class="db-row"><span class="db-k">Updated</span><span class="db-v">${src.last_updated||'Never'}</span></div>
+      </div>`;
+    }).join('');
+    document.getElementById('schedInfo').innerHTML=[
+      ir('Last auto-update',data.last_auto_update||'Never'),
+      ir('Next auto-update',data.next_update||'Unknown'),
+      ir('Total patterns',(mem.total||0).toLocaleString()),
+    ].join('');
+  }catch(e){document.getElementById('dbGrid').innerHTML='<div style="font-family:var(--mono);font-size:.7rem;color:var(--red2);padding:24px">Failed to load — backend running?</div>';}
+}
+
+async function triggerUpdate(){
+  const msg=document.getElementById('updateMsg');
+  msg.textContent='⟳ Downloading databases...';
+  try{
+    await fetch(API+'/db-update',{method:'POST'});
+    msg.textContent='✅ Update triggered! Refreshing in 30s...';
+    setTimeout(loadDbStatus,30000);
+  }catch(e){msg.textContent='❌ Failed to trigger update.';}
+}
+
+/* ── Stats ── */
+function loadStats(){
+  fetch(API+'/stats').then(r=>r.json()).then(d=>{
+    document.getElementById('hs-analyzed').textContent=(d.total_uas||0).toLocaleString();
+    document.getElementById('hs-malicious').textContent=(d.malicious_uas||0).toLocaleString();
+    document.getElementById('hs-reports').textContent=(d.total_reports||0).toLocaleString();
+  }).catch(()=>{});
+  fetch(API+'/db-status').then(r=>r.json()).then(d=>{
+    document.getElementById('hs-patterns').textContent=((d.in_memory||{}).total||0).toLocaleString();
+  }).catch(()=>{});
+}
+
+/* ── Helpers ── */
+function ir(k,v){return`<div class="irow"><span class="ik">${k}</span><span class="iv">${v}</span></div>`;}
+function showErr(m){const e=document.getElementById('ebox');e.textContent='⚠ '+m;e.classList.add('on');}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),3200);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+loadStats();
+</script>
+</body>
+</html>
