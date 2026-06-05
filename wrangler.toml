@@ -1,0 +1,23 @@
+name = "uaintel"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[site]
+bucket = "./public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "uaintel-community"
+database_id = "placeholder-replace-after-d1-create"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "placeholder-replace-after-kv-create"
+
+[triggers]
+crons = ["0 0 * * 0"]  # Weekly Sunday midnight
+
+[vars]
+RATE_LIMIT_ANALYZE = "30"
+RATE_LIMIT_REPORT = "10"
