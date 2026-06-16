@@ -9,14 +9,14 @@ directory = "./public"
 [[d1_databases]]
 binding = "DB"
 database_name = "uaintel-community"
-database_id = "placeholder-replace-after-d1-create"
+database_id = "816fe6cd-28c0-4777-8881-4847b6ecd0a2"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "placeholder-replace-after-kv-create"
+id = "ba5b41d6772d461988a960098b511234"
 
 [triggers]
-crons = ["0 0 * * 0"]  # Weekly Sunday midnight
+crons = ["0 0 * * SUN"]  # Weekly Sunday midnight
 
 [vars]
 RATE_LIMIT_ANALYZE = "30"
